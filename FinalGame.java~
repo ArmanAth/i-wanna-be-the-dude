@@ -1,0 +1,22 @@
+/* Final Game
+ * Platformer with shooting mechanics
+ * @author Arman
+ * @version June 2018
+ */
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+// the following imports are needed for pictures
+import java.io.File;
+import java.io.IOException;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+
+public class FinalGame{
+    //Game window properties 
+    static JFrame gameWindow; 
+    static GraphicsPanel canvas; 
+    static final int WIDTH = 750;
+    static final int HEIGHT = 505; 
+    static final int TOP = 0; 
+    static final int 

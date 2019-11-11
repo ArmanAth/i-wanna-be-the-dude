@@ -1,0 +1,367 @@
+/* I Wanna Be The Chap
+ * Platformer with shooting mechanics, taken inspirtation from I Wanna Be The Guy 
+ * @author Arman
+ * @version June 2018
+ */
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.io.*;
+import java.util.*; 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+
+public class IWannaBeTheChap{
+    //Game window properties 
+    static JFrame gameWindow; 
+    static GraphicsPanel canvas; 
+    static final int WIDTH = 815;
+    static final int HEIGHT = 600; 
+    static final int TOP = 0; 
+    static final int LEFT = 0;
+    //Key listener 
+    static MyKeyListener keyListener = new MyKeyListener(); 
+    //Background properties
+    static BufferedImage levelOneBackground; 
+    static final int LEVEL_X = 0; 
+    static final int LEVEL_Y = 0; 
+    //Character properties 
+    static int characterX = 50;
+    static int characterY = 285;
+    static int characterW = 15;
+    static int characterH =25; 
+    static Rectangle characterBox = new Rectangle(characterX, characterY, characterW, characterH);         
+    //Constant values for each level 
+    static final int LVTWO_NUM_WALL_HITBOXES = 14; 
+    static final int LVTWO_NUM_SPIKE_HITBOXES = 8; 
+    //Wall Collision Properties 
+    static int[] wallXCoordinates = new int [LVTWO_NUM_WALL_HITBOXES];
+    static int[] wallYCoordinates = new int [LVTWO_NUM_WALL_HITBOXES];
+    static int[] wallWidths = new int [LVTWO_NUM_WALL_HITBOXES];
+    static int [] wallHeights = new int [LVTWO_NUM_WALL_HITBOXES];
+    static Rectangle[] wallHitboxes = new Rectangle [LVTWO_NUM_WALL_HITBOXES];
+    //Spike Collision Properties 
+    static int[] spikeXCoordinates = new int [LVTWO_NUM_SPIKE_HITBOXES];
+    static int[] spikeYCoordinates = new int [LVTWO_NUM_SPIKE_HITBOXES];
+    static int[] spikeWidths = new int [LVTWO_NUM_SPIKE_HITBOXES];
+    static int [] spikeHeights = new int [LVTWO_NUM_SPIKE_HITBOXES];
+    static Rectangle[] spikeHitboxes = new Rectangle [LVTWO_NUM_SPIKE_HITBOXES];
+    //Current level for each save 
+    static int level = 2; 
+    //Platform properties 
+    static BufferedImage[] levelOnePlatforms = new BufferedImage [2]; 
+    static int[] levelOneCoordinates = {97,316, 416, 170}; 
+    static int[] levelOneWallProperties = new int[60]; 
+    //Character movement properties
+    static int characterVx; 
+    static int characterVy; 
+    static final int RUN_SPEED = 2; 
+    static final int JUMP_SPEED  = 0; 
+    static final int GRAVITY = 0; 
+    
+    //Character animation properties
+    
+//------------------------------------------------------------------------------------
+    public static void main(String[] args) throws IOException{
+        gameWindow = new JFrame("I Wanna Be The Chap"); 
+        gameWindow.setSize(WIDTH,HEIGHT);
+        gameWindow.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        
+        canvas = new GraphicsPanel();
+        canvas.addKeyListener(keyListener);
+        gameWindow.add(canvas); 
+        
+        //Importing all image files
+        try {                
+            levelOneBackground = ImageIO.read(new File("images/levelOnePic.jpg"));
+        } catch (IOException ex){} 
+        try {
+            for (int i = 0; i < levelOnePlatforms.length; i++){
+                levelOnePlatforms[i] = ImageIO.read(new File("images/brownPlatform.png")); 
+            }
+        }catch (IOException ex){}
+        
+        gameWindow.setVisible(true);
+        runGameLoop();
+        
+    }
+//-----------------------------------------------------------------------------------
+    public static void runGameLoop() throws IOException{
+        while(true){
+            //repainting the game every 10 miliseconds 
+            gameWindow.repaint();
+            try {Thread.sleep(10);} catch(Exception e){}
+            
+            //Level two 
+            if (level == 2){
+                //Reading wall hitboxes properties, and creating the rectangle objects 
+                wallXCoordinates = readWallX(LVTWO_NUM_WALL_HITBOXES, level);
+                wallYCoordinates = readWallY(LVTWO_NUM_WALL_HITBOXES, level); 
+                wallWidths = readWallWidths(LVTWO_NUM_WALL_HITBOXES, level); 
+                wallHeights = readWallHeights(LVTWO_NUM_WALL_HITBOXES, level); 
+                //Creating an array of rectangles with properties just read
+                for(int i = 0; i < LVTWO_NUM_WALL_HITBOXES; i++){
+                    Rectangle r = new Rectangle(); 
+                    r.setSize(wallWidths[i], wallHeights[i]);
+                    r.setLocation(wallXCoordinates[i], wallYCoordinates[i]);
+                    wallHitboxes[i] = r; 
+                }
+                //Reading spike hitbox properties, and creating the rectangle objects 
+                spikeXCoordinates = readSpikeX(LVTWO_NUM_SPIKE_HITBOXES, level); 
+                spikeYCoordinates = readSpikeY(LVTWO_NUM_SPIKE_HITBOXES, level); 
+                spikeWidths = readSpikeWidths(LVTWO_NUM_SPIKE_HITBOXES, level); 
+                spikeHeights = readSpikeHeights(LVTWO_NUM_SPIKE_HITBOXES, level); 
+                //Creating an array of rectangles with the properties just read 
+                for(int i = 0; i < LVTWO_NUM_SPIKE_HITBOXES; i++){
+                    Rectangle r = new Rectangle(); 
+                    r.setSize(spikeWidths[i], spikeHeights[i]);
+                    r.setLocation(spikeXCoordinates[i], spikeYCoordinates[i]);
+                    spikeHitboxes[i] = r; 
+                }
+                
+                //Moving the player horizontally 
+                characterX= characterX + characterVx;
+                characterBox.setLocation(characterX, characterY); 
+                //Handling horizontal collision with walls
+                for (int i = 0; i < wallHitboxes.length; i++){
+                    if (characterBox.intersects(wallHitboxes[i]) && characterVx <=0){
+                        characterX = characterX - characterVx;
+                        characterBox.setLocation(characterX, characterY); 
+                    }
+                }
+                for (int i = 0; i < wallHitboxes.length; i++){
+                    if (characterBox.intersects(wallHitboxes[i]) && characterVx >=0){
+                        characterX = characterX - characterVx;
+                        characterBox.setLocation(characterX, characterY); 
+                    }
+                }
+                
+                
+                //Moving the player vertically 
+                characterY = characterY + characterVy; 
+                characterBox.setLocation(characterX, characterY); 
+            }
+        }
+    }
+    
+    
+    
+//-----------------------------------------------------------------------------------
+    static class GraphicsPanel extends JPanel{
+        public GraphicsPanel(){
+            setFocusable(true); 
+            requestFocusInWindow();
+        }
+        public void paintComponent(Graphics g){ 
+            super.paintComponent(g); 
+            
+            //Drawing the level images depending on what level the user is on 
+            g.drawImage(levelOneBackground, LEVEL_X, LEVEL_Y, this);
+            
+            //Processing an array to draw platforms  
+            //To process the coordinates for each platform I multiply 
+            for (int i = 0; i < levelOnePlatforms.length * 2; i = i+2){  
+                g.drawImage(levelOnePlatforms[i/2], levelOneCoordinates[i], levelOneCoordinates[i+1], this);
+            }
+            g.setColor(Color.red);
+            g.drawRect(0,125,32, 158); 
+            g.drawRect(0, 316, 96, 31); 
+            g.drawRect(0, 347, 65, 31);
+            g.drawRect(0, 378, 32, 222);
+            g.drawRect(192,187,32,33);
+            g.drawRect(352, 251, 32, 96);
+            g.drawRect(417,401, 32,31);
+            g.drawRect(417,126,31,31);
+            g.drawRect(513,126, 31,31);
+            g.drawRect(481, 285, 95, 30); 
+            g.drawRect(673, 126, 137, 94);
+            g.drawRect(737, 220, 63, 31);
+            g.drawRect(705, 317, 95, 31); 
+            g.drawRect(769, 348, 31, 252);
+            g.setColor(Color.blue); 
+            g.drawRect(193,220, 31, 31); 
+            g.drawRect(193, 157, 31, 31);
+            g.drawRect(321, 251, 31, 95); 
+            g.drawRect(417, 156, 31, 31);       
+            g.drawRect(513, 156, 30 ,31); 
+            g.drawRect(480, 252, 31,31); 
+            g.drawRect(545, 252, 31, 31); 
+            g.drawRect(417,366,31,31); 
+            g.drawRect(characterX,characterY,characterW,characterH);
+        }
+    }
+//------------------------------------------------------------------------------------    
+    static class MyKeyListener implements KeyListener{
+        public void keyPressed(KeyEvent e){
+            int key = e.getKeyCode();
+            if (key == KeyEvent.VK_LEFT){
+                //Moving the character left when the user is holding left 
+                characterVx = -RUN_SPEED; 
+            }
+            if (key == KeyEvent.VK_RIGHT){
+                characterVx = RUN_SPEED; 
+            }
+            if (key == KeyEvent.VK_UP){
+                characterVy = -RUN_SPEED;
+            }
+            
+            if (key == KeyEvent.VK_DOWN){ 
+                characterVy = RUN_SPEED;
+            }
+            if (key == KeyEvent.VK_SPACE){
+                System.out.println(characterX); 
+                System.out.println(characterY); 
+                System.out.println(characterBox.getX());
+                System.out.println(characterBox.getY());
+            }
+            
+            
+        }                     
+        public void keyReleased(KeyEvent e){
+            int key = e.getKeyCode();
+            if (key == KeyEvent.VK_LEFT){ 
+                characterVx = 0;
+            }
+            if (key == KeyEvent.VK_RIGHT){
+                characterVx = 0; 
+            }
+            if (key == KeyEvent.VK_UP){
+                characterVy = 0; 
+            }
+            if (key == KeyEvent.VK_DOWN){ 
+                characterVy= 0; 
+            }
+        }       
+        public void keyTyped(KeyEvent e){
+        }        
+    }// MyKeyListener class end
+//------------------------------------------------------------------------------------    
+    //All methods for reading in and creating level hitboxes  
+    public static int[] readWallX(int numCoordinates,int level) throws IOException{ 
+        //Creating array for coordinates 
+        int[] coordinates = new int[numCoordinates]; 
+        //Determining which level to read the coordinates for 
+        String fileName = "level" + Integer.toString(level) +  "WallX";           
+        //Determining which level to read the coordinates for 
+        File xCoordinates = new File(fileName); 
+        Scanner readCoordinates = new Scanner(xCoordinates); 
+        //Reading all coordinates into an array 
+        for (int i = 0; i < numCoordinates; i++){
+            coordinates[i] = Integer.parseInt(readCoordinates.nextLine());
+        }
+        readCoordinates.close();
+        return coordinates; 
+    }
+//------------------------------------------------------------------------------------    
+    public static int[] readWallY(int numCoordinates,int level) throws IOException{
+        //Creating array for coordinates 
+        int[] coordinates = new int[numCoordinates]; 
+        //Determining which level to read the coordinates for 
+        String fileName = "level" + Integer.toString(level) +  "WallY";
+        //Determining which level to read the coordinates for 
+        File yCoordinates = new File(fileName);  
+        Scanner readCoordinates = new Scanner(yCoordinates);          
+        //Reading all coordinates into an array 
+        for (int i = 0; i < numCoordinates; i++){
+            coordinates[i] = Integer.parseInt(readCoordinates.nextLine());
+        }
+        readCoordinates.close();
+        return coordinates; 
+    }
+//------------------------------------------------------------------------------------    
+    public static int[] readWallWidths(int numWidths,int level) throws IOException{
+        //Creating array for coordinates 
+        int[] widths = new int[numWidths]; 
+        //Variable to determine which levels properties to get 
+        String fileName = "level" + Integer.toString(level) +  "WallW";
+        //Determining which level to read the coordinates for 
+        File levelWidths = new File(fileName); 
+        Scanner readWidths = new Scanner(levelWidths); 
+        //Reading all coordinates into an array 
+        for (int i = 0; i < numWidths; i++){
+            widths[i] = Integer.parseInt(readWidths.nextLine());
+        }
+        readWidths.close();
+        return widths; 
+    }
+//------------------------------------------------------------------------------------    
+    public static int[] readWallHeights(int numHeights,int level) throws IOException{
+        //Creating array for coordinates 
+        int[] heights = new int[numHeights]; 
+        //Determining which level to read the coordinates for 
+        String fileName = "level" + Integer.toString(level) +  "WallH";
+        //Determining which level to read the coordinates for 
+        File levelHeights = new File(fileName); 
+        Scanner readHeights = new Scanner(levelHeights);  
+        //Reading all coordinates into an array 
+        for (int i = 0; i < numHeights; i++){
+            heights[i] = Integer.parseInt(readHeights.nextLine());
+        }
+        readHeights.close();
+        return heights; 
+    }
+//------------------------------------------------------------------------------------    
+    public static int[] readSpikeX(int numCoordinates,int level) throws IOException{
+        //Creating array for coordinates 
+        int[] coordinates = new int[numCoordinates]; 
+        //Determining which level to read the coordinates for 
+        String fileName = "level" + Integer.toString(level) +  "SpikeX";
+        //Determining which level to read the coordinates for 
+        File xSpikes = new File(fileName); 
+        Scanner readCoordinates = new Scanner(xSpikes);  
+        //Reading all coordinates into an array 
+        for (int i = 0; i < numCoordinates; i++){
+            coordinates[i] = Integer.parseInt(readCoordinates.nextLine());
+        }
+        readCoordinates.close();
+        return coordinates; 
+    }
+//------------------------------------------------------------------------------------    
+    public static int[] readSpikeY(int numCoordinates,int level) throws IOException{
+        //Creating array for coordinates 
+        int[] coordinates = new int[numCoordinates]; 
+        //Determining which level to read the coordinates for 
+        String fileName = "level" + Integer.toString(level) +  "SpikeY";
+        //Determining which level to read the coordinates for 
+        File ySpikes = new File(fileName); 
+        Scanner readCoordinates = new Scanner(ySpikes);  
+        //Reading all coordinates into an array 
+        for (int i = 0; i < numCoordinates; i++){
+            coordinates[i] = Integer.parseInt(readCoordinates.nextLine());
+        }
+        readCoordinates.close();
+        return coordinates; 
+    }
+//------------------------------------------------------------------------------------    
+    public static int[] readSpikeWidths(int numWidths,int level) throws IOException{
+        //Creating array for coordinates 
+        int[] widths = new int[numWidths]; 
+        //Determining which level to read the coordinates for 
+        String fileName = "level" + Integer.toString(level) +  "SpikeW";
+        //Determining which level to read the coordinates for 
+        File wSpikes = new File(fileName); 
+        Scanner readWidths = new Scanner(wSpikes);  
+        //Reading all coordinates into an array 
+        for (int i = 0; i < numWidths; i++){
+            widths[i] = Integer.parseInt(readWidths.nextLine());
+        }
+        readWidths.close();
+        return widths; 
+    }    
+//------------------------------------------------------------------------------------        
+    public static int[] readSpikeHeights(int numHeights,int level) throws IOException{
+        //Creating array for coordinates 
+        int[] heights = new int[numHeights]; 
+        //Determining which level to read the coordinates for 
+        String fileName = "level" + Integer.toString(level) +  "SpikeH";
+        //Determining which level to read the coordinates for 
+        File hSpikes = new File(fileName); 
+        Scanner readHeights = new Scanner(hSpikes);  
+        //Reading all coordinates into an array 
+        for (int i = 0; i < numHeights; i++){
+            heights[i] = Integer.parseInt(readHeights.nextLine());
+        }
+        readHeights.close();
+        return heights; 
+    }    
+}
